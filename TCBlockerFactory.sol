@@ -8,11 +8,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./CloneLib.sol";
 
 interface BlockTC {
-    function setOwner(address _newOwner) external;
-    function addBlockers(address[] calldata _toBlock) external;
-    function addBlocker(address _toBlock) external;
-    function removeBlockers(address[] calldata _toUnblock) external;
-    function removeBlocker(address _toUnblock) external;
+    function init(address _newOwner, address factory, address[] calldata blockers) external;
 }
 
 contract TCBlockerFactory is Ownable {
@@ -40,12 +36,15 @@ contract TCBlockerFactory is Ownable {
         counter++;
 
         address impl = LibClone.clone(currentImplementation);
-        BlockTC(impl).setOwner(msg.sender);
+        BlockTC(impl).init(msg.sender, address(this), blockedAddresses.values());
 
         deployedImplementations[counter] = impl;
         userToIndex[_user] = counter;
         return counter;
     }  
+    function getBlockedAddresses() external view returns (address[] memory) {
+        return blockedAddresses.values();
+    }
 
     function addBlockedAddresses(address[] calldata toBlock) external onlyOwner {
          for(uint i = 0; i < toBlock.length; i++) {
