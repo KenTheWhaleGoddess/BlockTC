@@ -1,41 +1,36 @@
 pragma solidity 0.8.10;
 
-contract BlockTC {
+contract TCBlocker {
 
-    address _owner;
+    address receiver;
+    address factory;
     mapping(address => bool) blocked;
 
     receive() external payable {
-        require(_owner != address(0));
+        require(receiver != address(0), "sanity check");
         require(!blocked[msg.sender], "tc or otherwise blocked");
-        payable(_owner).call{value: msg.value}('');
+        payable(receiver).call{value: msg.value}('');
+    }
+    
+    function getReceiver() external view returns (address) {
+        return receiver;
+    }
+    function init(address _receiver, address _factory, address[] calldata blockers) external {
+        require(receiver == address(0) && factory == address(0), "only set once");
+        receiver = _receiver;
+        factory = _factory;
     }
 
-    function setOwner(address _newOwner) external {
-        require(_owner == address(0) || msg.sender == _owner, "only set once");
-        _owner = _newOwner;
+    function transferReceiver(address _newReceiver) external {
+        require(msg.sender == factory, "factory only");
+
+        receiver = _newReceiver;
     }
 
-    function addBlockers(address[] calldata _toBlock) external {
-        require(msg.sender == _owner, "only owner can block");
+    function addBlockers(address[] calldata _toBlock) internal {
+        require(msg.sender == factory, "only owner can block");
         for(uint i; i < _toBlock.length; i++) {
-            addBlocker(_toBlock[i]);
+            blocked[_toBlock[i]] = true;
         }
-    }
-
-    function removeBlockers(address[] calldata _toUnblock) external {
-        require(msg.sender == _owner, "only owner can block");
-        for(uint i; i < _toUnblock.length; i++) {
-            removeBlocker(_toUnblock[i]);
-        }
-    }
-
-    function addBlocker(address _toBlock) public {
-        require(msg.sender == _owner, "only owner can block");
-        blocked[_toBlock] = true;
-    }
-    function removeBlocker(address _toUnblock) public {
-        require(msg.sender == _owner, "only owner can unblock");
-        blocked[_toUnblock] = false;
     }
 }
